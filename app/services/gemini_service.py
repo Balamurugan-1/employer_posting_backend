@@ -32,3 +32,26 @@ async def analyze_jobs_with_gemini(user_query: str, jobs_list: list) -> str:
         return response.text
     except Exception as e:
         return f"AI Service Error: {str(e)}"
+    
+
+async def generate_job_description(title: str, company: str, location: str) -> str:
+    model = genai.GenerativeModel("gemini-2.5-flash")
+    
+    prompt = f"""
+    Write a professional, engaging Job Description for a {title} role at {company} located in {location}.
+    
+    Structure:
+    1. Brief Role Overview (2-3 sentences)
+    2. Key Responsibilities (Bullet points)
+    3. Required Skills (Bullet points)
+    4. Why Join Us (Short paragraph)
+    
+    Tone: Professional but exciting.
+    Format: Plain text (no markdown symbols like ** or ##, just clean text).
+    """
+    
+    try:
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        return f"Could not generate description: {str(e)}"

@@ -10,6 +10,8 @@ from typing import Annotated
 from jose import jwt, JWTError
 from app.core.config import settings
 from datetime import datetime
+from app.services.gemini_service import generate_job_description
+from app.models.job import JDGenRequest
 
 router = APIRouter()
 
@@ -158,3 +160,8 @@ async def smart_job_match(request: Request, search_data: SmartSearchRequest):
     
     return {"ai_response": ai_feedback}
 
+
+@router.post("/generate-desc")
+async def generate_desc_api(payload: JDGenRequest, current_user: str = Depends(get_current_user)):
+    desc = await generate_job_description(payload.title, payload.company_name, payload.location)
+    return {"description": desc}

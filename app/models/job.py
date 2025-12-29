@@ -40,3 +40,8 @@ class JobUpdate(BaseModel):
                 "salary_range": "$120k - $150k"
             }
         }
+
+class JDGenRequest(BaseModel):
+    title: str
+    company_name: str
+    location: str
