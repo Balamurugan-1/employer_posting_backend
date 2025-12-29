@@ -5,3 +5,7 @@ python-dotenv
 pydantic-settings
 pydantic[email]
 google-generativeai
+passlib[bcrypt]
+argon2-cffi
+python-jose[cryptography]
+python-multipart

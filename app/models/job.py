@@ -10,14 +10,15 @@ class JobBase(BaseModel):
     description: str = Field(..., min_length=10, description="Detailed job description")
     requirements: List[str] = Field(default=[], example=["Python", "FastAPI", "MongoDB"])
     salary_range: Optional[str] = Field(None, example="$100k - $140k")
-    employer_email: EmailStr = Field(..., example="hr@techcorp.com") # Simple auth for now
+    employer_email: EmailStr = Field(..., example="hr@techcorp.com") 
 
 class JobCreate(JobBase):
     pass
 
 class JobDB(JobBase):
-    id: str = Field(..., alias="_id") # Map MongoDB's _id to id
+    id: str = Field(..., alias="_id") 
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    owner_email: str = Field(...)
 
     class Config:
         populate_by_name = True

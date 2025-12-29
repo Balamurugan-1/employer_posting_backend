@@ -5,25 +5,57 @@ from bson import ObjectId
 from app.models.job import JobUpdate 
 from app.services.gemini_service import analyze_jobs_with_gemini
 from app.models.smart_search import SmartSearchRequest
+from fastapi import Depends, Header
+from typing import Annotated
+from jose import jwt, JWTError
+from app.core.config import settings
+from datetime import datetime
 
 router = APIRouter()
 
+#helper function
+async def get_current_user(authorization: Annotated[str, Header()] = None):
+    if not authorization:
+         raise HTTPException(status_code=401, detail="Missing Authentication Token")
+
+    try:
+       
+        scheme, token = authorization.split()
+        if scheme.lower() != "bearer":
+            raise HTTPException(status_code=401, detail="Invalid auth scheme")
+
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        return email
+    except (JWTError, ValueError):
+        raise HTTPException(status_code=401, detail="Could not validate credentials")
+    
 @router.post("/", response_description="Add new job", status_code=status.HTTP_201_CREATED, response_model=JobDB)
-async def create_job(request: Request, job: JobCreate):
+async def create_job(
+    request: Request, 
+    job: JobCreate, 
+    current_user: str = Depends(get_current_user)
+):
+  
     job_data = job.model_dump()
     
-    from datetime import datetime
+    job_data["employer_email"] = current_user
+    
+
+    job_data["owner_email"] = current_user
+    
+  
     job_data["created_at"] = datetime.utcnow()
 
+  
     new_job = await request.app.mongodb["jobs"].insert_one(job_data)
 
     created_job = await request.app.mongodb["jobs"].find_one({"_id": new_job.inserted_id})
+    created_job["_id"] = str(created_job["_id"])
     
-    if created_job:
-        created_job["_id"] = str(created_job["_id"])
-        return created_job
-        
-    raise HTTPException(status_code=500, detail="Job could not be created")
+    return created_job
 
 
 @router.get("/", response_description="List all jobs", response_model=List[JobDB])
@@ -42,6 +74,21 @@ async def list_jobs(
         cursor = request.app.mongodb["jobs"].find(query).limit(limit)
     else:
         cursor = request.app.mongodb["jobs"].find(query).sort("created_at", -1).limit(limit)
+    
+    async for document in cursor:
+        document["_id"] = str(document["_id"])
+        jobs.append(document)
+        
+    return jobs
+
+@router.get("/my-jobs", response_description="List current user jobs", response_model=List[JobDB])
+async def list_my_jobs(
+    request: Request, 
+    current_user: str = Depends(get_current_user)
+):
+    jobs = []
+
+    cursor = request.app.mongodb["jobs"].find({"owner_email": current_user})
     
     async for document in cursor:
         document["_id"] = str(document["_id"])
@@ -110,3 +157,4 @@ async def smart_job_match(request: Request, search_data: SmartSearchRequest):
     ai_feedback = await analyze_jobs_with_gemini(search_data.query, jobs_list)
     
     return {"ai_response": ai_feedback}
+
