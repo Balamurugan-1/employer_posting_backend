@@ -4,6 +4,8 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from app.core.config import settings
 from app.routes.jobs import router as job_router
 from app.routes.auth import router as auth_router
+from app.routes.applications import router as apps_router
+
 
 app = FastAPI(title="Job Portal API")
 
@@ -22,6 +24,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router, tags=["Auth"], prefix="/auth")
+app.include_router(apps_router, tags=["Applications"], prefix="/applications")
 
 @app.on_event("startup")
 async def startup_db_client():

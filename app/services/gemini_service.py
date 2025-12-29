@@ -1,5 +1,6 @@
 import google.generativeai as genai
 from app.core.config import settings
+import json
 
 genai.configure(api_key=settings.GEMINI_API_KEY)
 
@@ -55,3 +56,37 @@ async def generate_job_description(title: str, company: str, location: str) -> s
         return response.text
     except Exception as e:
         return f"Could not generate description: {str(e)}"
+    
+
+
+async def score_resume(resume_text: str, job_description: str) -> dict:
+    model = genai.GenerativeModel("gemini-2.5-flash")
+    
+   
+    prompt = f"""
+    Act as an ATS (Applicant Tracking System).
+    
+    JOB DESCRIPTION:
+    {job_description}
+    
+    CANDIDATE RESUME:
+    {resume_text}
+    
+    TASK:
+    1. Compare the resume to the job description.
+    2. Assign a match score from 0 to 100.
+    3. Provide brief feedback (what matches, what is missing).
+    
+    OUTPUT FORMAT (Strict JSON):
+    {{
+        "score": 85,
+        "feedback": "Strong match for Python, but lacks experience in AWS."
+    }}
+    """
+    
+    try:
+        response = model.generate_content(prompt)
+        clean_text = response.text.replace("```json", "").replace("```", "").strip()
+        return json.loads(clean_text)
+    except Exception as e:
+        return {"score": 0, "feedback": "Error analyzing resume."}
